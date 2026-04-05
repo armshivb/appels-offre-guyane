@@ -189,12 +189,52 @@ export default function DetailPage() {
           )}
           {ao.texte_complet && (
             <div>
-              <h2 style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.07em', color: '#94a3b8', margin: '0 0 10px' }}>
+              <h2 style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.07em', color: '#94a3b8', margin: '0 0 12px' }}>
                 Texte complet
               </h2>
-              <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.7, margin: 0, whiteSpace: 'pre-wrap', maxHeight: '300px', overflowY: 'auto', background: '#f8fafc', padding: '14px 16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                {ao.texte_complet}
-              </p>
+              <div style={{ maxHeight: '520px', overflowY: 'auto', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '18px 20px' }}>
+                {ao.texte_complet.split('\n').map((line, i) => {
+                  const trimmed = line.trim()
+                  if (!trimmed) return <div key={i} style={{ height: '8px' }} />
+
+                  // Ligne type titre/section : tout en majuscules ou commence par un numéro + point
+                  const isTitle = /^[A-ZÀÂÉÈÊËÎÏÔÙÛÜ\s\-–:]{6,}$/.test(trimmed)
+                    || /^(article|section|chapitre|\d+[\.\)])\s/i.test(trimmed)
+                    || /^(objet|pouvoir adjudicateur|type de marché|procédure|critère|date|montant|variante|lot|avis|référence|identification)/i.test(trimmed)
+
+                  // Ligne type clé : valeur (contient ":")
+                  const isKV = trimmed.includes(':') && trimmed.indexOf(':') < 60 && !isTitle
+
+                  if (isTitle) return (
+                    <p key={i} style={{
+                      fontSize: '12px', fontWeight: '800', color: '#14532d',
+                      textTransform: 'uppercase', letterSpacing: '0.06em',
+                      margin: '14px 0 6px', paddingBottom: '4px',
+                      borderBottom: '1.5px solid #d1fae5',
+                    }}>
+                      {trimmed}
+                    </p>
+                  )
+
+                  if (isKV) {
+                    const colonIdx = trimmed.indexOf(':')
+                    const key = trimmed.slice(0, colonIdx).trim()
+                    const val = trimmed.slice(colonIdx + 1).trim()
+                    return (
+                      <div key={i} style={{ display: 'flex', gap: '8px', margin: '4px 0', fontSize: '13px', lineHeight: 1.6 }}>
+                        <span style={{ fontWeight: '700', color: '#374151', flexShrink: 0, minWidth: '160px' }}>{key} :</span>
+                        <span style={{ color: '#4b5563' }}>{val}</span>
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <p key={i} style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.7, margin: '3px 0' }}>
+                      {trimmed}
+                    </p>
+                  )
+                })}
+              </div>
             </div>
           )}
         </div>
