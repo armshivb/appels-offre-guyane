@@ -50,7 +50,7 @@ const COLUMNS = [
   { key: 'lien',             label: 'Lien' },
 ]
 
-const BASE = 'http://localhost:8000/api'
+const BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000') + '/api'
 
 function buildExportUrl(params: Record<string, string | number | undefined>) {
   const qs = new URLSearchParams()
