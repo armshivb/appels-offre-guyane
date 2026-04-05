@@ -21,9 +21,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }
         `}</Script>
       </head>
-      <body className="bg-gray-50 min-h-screen font-sans">
+      <body className="min-h-screen font-sans" style={{ display: 'flex' }} suppressHydrationWarning>
         <Navbar />
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main style={{
+          marginLeft: '220px',
+          flex: 1,
+          minHeight: '100vh',
+          padding: '32px 32px',
+          maxWidth: 'calc(100vw - 220px)',
+        }}>
           {children}
         </main>
       </body>

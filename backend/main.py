@@ -311,6 +311,83 @@ def get_top_acheteurs(
     rows = q.group_by(AppelOffre.acheteur).order_by(desc("count")).limit(10).all()
     return [{"acheteur": r.acheteur, "count": r.count} for r in rows]
 
+ANALYSE_SYSTEM_PROMPT = """Tu es un expert en marchés publics français.
+À partir de l'appel d'offre fourni, extrais uniquement les informations
+explicitement présentes dans le document et retourne un JSON structuré.
+
+Format de réponse obligatoire :
+{
+  "id_operation": "...",
+  "designation": "...",
+  "maitre_ouvrage": "...",
+  "description": "...",
+  "localite": "...",
+  "type_travaux": "...",
+  "secteur": "...",
+  "numero_log": "...",
+  "procedure": "...",
+  "ao_date_prevue": "...",
+  "ao_date_reelle": "...",
+  "statut": "...",
+  "resultat_marche_date_prevue": "...",
+  "contact": "...",
+  "email": "...",
+  "telephone": "...",
+  "lots": [
+    {
+      "numero": "LOT 1",
+      "intitule": "...",
+      "code_ape": "...",
+      "montant_previsionnel": "...",
+      "surface_plancher": "...",
+      "corps_metier": "...",
+      "materiel": "...",
+      "estimation_basse": "...",
+      "estimation_haute": "..."
+    }
+  ]
+}
+
+Règles strictes :
+- Si une information est absente du document, mets exactement "Non dispo*"
+- Ne jamais inventer, estimer ou déduire une information
+- Retourne uniquement le JSON brut, sans texte autour, sans balises markdown"""
+
+class AnalyseRequest(BaseModel):
+    ao_brut: str
+
+@app.post("/api/analyser-ao")
+def analyser_ao(body: AnalyseRequest):
+    import json
+    from anthropic import Anthropic
+
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY non configurée")
+
+    client = Anthropic(api_key=api_key)
+    try:
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=2000,
+            system=ANALYSE_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": body.ao_brut[:8000]}],
+        )
+        raw = response.content[0].text.strip()
+    except Exception as e:
+        logger.error(f"Anthropic API error: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur API Anthropic: {str(e)}")
+
+    try:
+        result = json.loads(raw)
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Claude n'a pas retourné un JSON valide : {raw[:200]}"
+        )
+
+    return result
+
 @app.get("/api/acheteurs")
 def get_acheteurs(db: Session = Depends(get_db)):
     rows = db.query(AppelOffre.acheteur).filter(
