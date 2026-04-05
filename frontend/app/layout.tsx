@@ -23,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen font-sans" style={{ display: 'flex' }} suppressHydrationWarning>
         <Navbar />
-        <main style={{
+        <main className="main-content" style={{
           marginLeft: '220px',
           flex: 1,
           minHeight: '100vh',
@@ -32,6 +32,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         }}>
           {children}
         </main>
+        <style>{`
+          @media (max-width: 768px) {
+            .main-content {
+              margin-left: 0 !important;
+              max-width: 100vw !important;
+              padding: 80px 16px 24px !important;
+            }
+          }
+        `}</style>
       </body>
     </html>
   )
