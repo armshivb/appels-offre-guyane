@@ -185,15 +185,19 @@ export default function Sidebar() {
         padding: '0 16px', height: '58px',
         alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <Logo />
         <button onClick={() => setMenuOpen(o => !o)} style={{
-          background: 'none', border: 'none', cursor: 'pointer',
-          color: 'white', padding: '8px', display: 'flex', flexDirection: 'column', gap: '5px',
+          background: 'none', border: '1.5px solid rgba(250,204,21,0.4)', cursor: 'pointer',
+          color: 'white', padding: '6px 10px', borderRadius: '8px',
+          display: 'flex', alignItems: 'center', gap: '8px',
         }}>
-          <span style={{ display: 'block', width: '22px', height: '2px', background: menuOpen ? '#facc15' : 'white', borderRadius: '2px', transform: menuOpen ? 'rotate(45deg) translate(5px, 5px)' : 'none', transition: 'all 0.2s' }} />
-          <span style={{ display: 'block', width: '22px', height: '2px', background: menuOpen ? 'transparent' : 'white', borderRadius: '2px', transition: 'all 0.2s' }} />
-          <span style={{ display: 'block', width: '22px', height: '2px', background: menuOpen ? '#facc15' : 'white', borderRadius: '2px', transform: menuOpen ? 'rotate(-45deg) translate(5px, -5px)' : 'none', transition: 'all 0.2s' }} />
+          <span style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ display: 'block', width: '18px', height: '2px', background: menuOpen ? '#facc15' : 'white', borderRadius: '2px', transform: menuOpen ? 'rotate(45deg) translate(4px, 4px)' : 'none', transition: 'all 0.2s' }} />
+            <span style={{ display: 'block', width: '18px', height: '2px', background: menuOpen ? 'transparent' : 'white', borderRadius: '2px', transition: 'all 0.2s' }} />
+            <span style={{ display: 'block', width: '18px', height: '2px', background: menuOpen ? '#facc15' : 'white', borderRadius: '2px', transform: menuOpen ? 'rotate(-45deg) translate(4px, -4px)' : 'none', transition: 'all 0.2s' }} />
+          </span>
+          <span style={{ fontSize: '13px', fontWeight: '700', color: menuOpen ? '#facc15' : 'white' }}>Menu</span>
         </button>
+        <Logo />
       </header>
 
       {/* ── MOBILE drawer ───────────────────────────────── */}
