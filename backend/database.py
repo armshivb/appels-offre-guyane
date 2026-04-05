@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import os
 
-DATABASE_URL = os.getenv("DATABASE_URL", os.getenv("DB_URL", "sqlite:///./appels_offre.db"))
+DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("DB_URL") or "sqlite:///./appels_offre.db"
 
 # Railway fournit les URLs avec préfixe "postgres://" — SQLAlchemy 2.x requiert "postgresql://"
 if DATABASE_URL.startswith("postgres://"):
