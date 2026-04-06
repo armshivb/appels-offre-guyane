@@ -103,8 +103,8 @@ export default function GuyaneMap({ data, filtreVille, onVilleClick }: {
     <div style={{ position: 'relative' }}>
       {/* @ts-expect-error react-leaflet types */}
       <MapContainer
-        center={[4.0, -53.0]}
-        zoom={7}
+        bounds={[[2.1, -54.6], [5.75, -51.6]]}
+        boundsOptions={{ padding: [20, 20] }}
         style={{ height: '420px', borderRadius: '12px', border: '1.5px solid #bbf7d0', zIndex: 0 }}
         scrollWheelZoom={false}
       >
