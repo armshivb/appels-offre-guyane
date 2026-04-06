@@ -30,6 +30,39 @@ function formatMontant(m: number | null) {
   return `${m} €`
 }
 
+const VILLES_GUYANE: { alias: string[]; canonical: string }[] = [
+  { alias: ['cayenne'],                                    canonical: 'CAYENNE' },
+  { alias: ['saint-laurent-du-maroni', 'saint laurent'],  canonical: 'SAINT-LAURENT-DU-MARONI' },
+  { alias: ['kourou'],                                     canonical: 'KOUROU' },
+  { alias: ['matoury'],                                    canonical: 'MATOURY' },
+  { alias: ['rémire-montjoly', 'remire-montjoly', 'rémire', 'remire'], canonical: 'RÉMIRE-MONTJOLY' },
+  { alias: ['maripasoula', 'maripa-soula'],                canonical: 'MARIPASOULA' },
+  { alias: ['mana'],                                       canonical: 'MANA' },
+  { alias: ['apatou'],                                     canonical: 'APATOU' },
+  { alias: ['saint-georges'],                              canonical: 'SAINT-GEORGES' },
+  { alias: ['sinnamary'],                                  canonical: 'SINNAMARY' },
+  { alias: ['iracoubo'],                                   canonical: 'IRACOUBO' },
+  { alias: ['grand-santi'],                                canonical: 'GRAND-SANTI' },
+  { alias: ['roura'],                                      canonical: 'ROURA' },
+  { alias: ['montsinéry', 'montsinery'],                   canonical: 'MONTSINÉRY-TONNEGRANDE' },
+  { alias: ['papaïchton', 'papaichton'],                   canonical: 'PAPAÏCHTON' },
+  { alias: ['camopi'],                                     canonical: 'CAMOPI' },
+  { alias: ['awala-yalimapo', 'awala'],                    canonical: 'AWALA-YALIMAPO' },
+  { alias: ['saül', 'saul'],                               canonical: 'SAÜL' },
+  { alias: ['saint-élie', 'saint-elie'],                   canonical: 'SAINT-ÉLIE' },
+  { alias: ['régina', 'regina'],                           canonical: 'RÉGINA' },
+  { alias: ['ouanary'],                                    canonical: 'OUANARY' },
+]
+
+function detectVille(ao: AppelOffre): string {
+  const texte = [ao.acheteur, ao.titre, ao.objet_marche, ao.texte_complet]
+    .filter(Boolean).join(' ').toLowerCase()
+  for (const { alias, canonical } of VILLES_GUYANE) {
+    if (alias.some(a => texte.includes(a))) return canonical
+  }
+  return 'GUYANE (973)'
+}
+
 // Mapping AO → colonnes du tableau
 function aoToRow(ao: AppelOffre): Record<string, string> {
   return {
@@ -37,7 +70,7 @@ function aoToRow(ao: AppelOffre): Record<string, string> {
     designation:                  ao.titre || ao.objet_marche || ND,
     maitre_ouvrage:               ao.acheteur                || ND,
     description:                  ao.objet_marche            || ND,
-    localite:                     'Guyane (973)',
+    localite:                     detectVille(ao),
     type_travaux:                 ao.type_marche             || ND,
     secteur:                      ND,
     numero_log:                   String(ao.id),
