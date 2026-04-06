@@ -226,11 +226,19 @@ VILLES_GUYANE = [
 ]
 
 @app.get("/api/stats/par-ville")
-def get_stats_par_ville(db: Session = Depends(get_db)):
+def get_stats_par_ville(
+    type_marche: Optional[str] = None,
+    acheteur: Optional[str] = None,
+    mois: Optional[int] = Query(None, ge=1, le=12),
+    annee: Optional[int] = Query(None, ge=2000, le=2100),
+    db: Session = Depends(get_db),
+):
     now = datetime.utcnow()
-    aos = db.query(AppelOffre).filter(
+    q = db.query(AppelOffre).filter(
         (AppelOffre.date_limite >= now) | (AppelOffre.date_limite.is_(None))
-    ).all()
+    )
+    q = _apply_filters(q, type_marche, acheteur, mois, annee)
+    aos = q.all()
 
     result: dict = {}
     for ao in aos:

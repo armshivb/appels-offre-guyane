@@ -39,8 +39,18 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchAcheteurs().then(setAcheteurs).catch(() => {})
-    fetch(`${BASE}/api/stats/par-ville`).then(r => r.json()).then(setVillesStats).catch(() => {})
   }, [BASE])
+
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (typeMarche) params.set('type_marche', typeMarche)
+    if (acheteur)   params.set('acheteur', acheteur)
+    if (mois)       params.set('mois', mois)
+    if (annee)      params.set('annee', annee)
+    const qs = params.toString()
+    fetch(`${BASE}/api/stats/par-ville${qs ? '?' + qs : ''}`)
+      .then(r => r.json()).then(setVillesStats).catch(() => {})
+  }, [BASE, typeMarche, acheteur, mois, annee])
 
   useEffect(() => {
     const filters = {
