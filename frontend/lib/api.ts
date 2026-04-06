@@ -52,6 +52,7 @@ export interface StatsFilters {
   acheteur?: string
   mois?: number
   annee?: number
+  ville?: string
 }
 
 function buildQS(filters: StatsFilters): string {

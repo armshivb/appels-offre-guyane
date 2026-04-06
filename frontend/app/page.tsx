@@ -58,6 +58,7 @@ export default function Dashboard() {
       acheteur: acheteur || undefined,
       mois: mois ? Number(mois) : undefined,
       annee: annee ? Number(annee) : undefined,
+      ville: filtreVille || undefined,
     }
     setLoading(true)
     Promise.all([
@@ -72,7 +73,7 @@ export default function Dashboard() {
       setTopAcheteurs(top)
     }).catch(() => setBackendError(true))
     .finally(() => setLoading(false))
-  }, [typeMarche, acheteur, mois, annee])
+  }, [typeMarche, acheteur, mois, annee, filtreVille])
 
   const barData = (() => {
     if (annee) {

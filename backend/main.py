@@ -277,7 +277,32 @@ def get_stats_par_ville(
         if v["ville"] != "Non localisé"
     ]
 
-def _apply_filters(q, type_marche=None, acheteur=None, mois=None, annee=None):
+VILLES_ALIASES: dict = {
+    "CAYENNE":                    ["cayenne"],
+    "SAINT-LAURENT-DU-MARONI":   ["saint-laurent-du-maroni", "saint laurent du maroni"],
+    "KOUROU":                     ["kourou"],
+    "MATOURY":                    ["matoury"],
+    "RÉMIRE-MONTJOLY":            ["rémire-montjoly", "remire-montjoly", "rémire", "remire"],
+    "MARIPASOULA":                ["maripasoula", "maripa-soula"],
+    "MANA":                       ["mana"],
+    "APATOU":                     ["apatou"],
+    "SAINT-GEORGES":              ["saint-georges"],
+    "SINNAMARY":                  ["sinnamary"],
+    "IRACOUBO":                   ["iracoubo"],
+    "GRAND-SANTI":                ["grand-santi"],
+    "ROURA":                      ["roura"],
+    "MONTSINÉRY-TONNEGRANDE":     ["montsinéry", "montsinery"],
+    "PAPAÏCHTON":                 ["papaïchton", "papaichton"],
+    "CAMOPI":                     ["camopi"],
+    "AWALA-YALIMAPO":             ["awala-yalimapo", "awala"],
+    "SAÜL":                       ["saül", "saul"],
+    "SAINT-ÉLIE":                 ["saint-élie", "saint-elie"],
+    "RÉGINA":                     ["régina", "regina"],
+    "OUANARY":                    ["ouanary"],
+}
+
+def _apply_filters(q, type_marche=None, acheteur=None, mois=None, annee=None, ville=None):
+    from sqlalchemy import or_
     if type_marche:
         q = q.filter(AppelOffre.type_marche == type_marche)
     if acheteur:
@@ -286,6 +311,16 @@ def _apply_filters(q, type_marche=None, acheteur=None, mois=None, annee=None):
         q = q.filter(extract("year", AppelOffre.date_publication) == annee)
     if mois:
         q = q.filter(extract("month", AppelOffre.date_publication) == mois)
+    if ville:
+        aliases = VILLES_ALIASES.get(ville.upper(), [ville.lower()])
+        conditions = []
+        for alias in aliases:
+            like = f"%{alias}%"
+            conditions.append(AppelOffre.acheteur.ilike(like))
+            conditions.append(AppelOffre.titre.ilike(like))
+            conditions.append(AppelOffre.objet_marche.ilike(like))
+            conditions.append(AppelOffre.texte_complet.ilike(like))
+        q = q.filter(or_(*conditions))
     return q
 
 @app.get("/api/stats/kpi")
@@ -294,16 +329,17 @@ def get_kpi(
     acheteur: Optional[str] = None,
     mois: Optional[int] = Query(None, ge=1, le=12),
     annee: Optional[int] = Query(None, ge=2000, le=2100),
+    ville: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
-    q = _apply_filters(db.query(AppelOffre), type_marche, acheteur, mois, annee)
+    q = _apply_filters(db.query(AppelOffre), type_marche, acheteur, mois, annee, ville)
     total = q.count()
 
     now = datetime.utcnow()
     first_day = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     ao_mois = _apply_filters(
         db.query(AppelOffre).filter(AppelOffre.date_publication >= first_day),
-        type_marche, acheteur
+        type_marche, acheteur, ville=ville
     ).count()
 
     montant_total = q.with_entities(func.sum(AppelOffre.montant_estime)).scalar() or 0
@@ -331,6 +367,7 @@ def get_stats_par_mois(
     acheteur: Optional[str] = None,
     mois: Optional[int] = Query(None, ge=1, le=12),
     annee: Optional[int] = Query(None, ge=2000, le=2100),
+    ville: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
     q = _apply_filters(
@@ -339,7 +376,7 @@ def get_stats_par_mois(
             extract("month", AppelOffre.date_publication).label("mois"),
             func.count(AppelOffre.id).label("count"),
         ).filter(AppelOffre.date_publication.isnot(None)),
-        type_marche, acheteur, mois, annee
+        type_marche, acheteur, mois, annee, ville
     )
     rows = q.group_by("annee", "mois").order_by("annee", "mois").all()
     return [{"annee": int(r.annee), "mois": int(r.mois), "count": r.count} for r in rows]
@@ -349,11 +386,12 @@ def get_stats_par_type(
     acheteur: Optional[str] = None,
     mois: Optional[int] = Query(None, ge=1, le=12),
     annee: Optional[int] = Query(None, ge=2000, le=2100),
+    ville: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
     q = _apply_filters(
         db.query(AppelOffre.type_marche, func.count(AppelOffre.id).label("count")),
-        None, acheteur, mois, annee
+        None, acheteur, mois, annee, ville
     )
     rows = q.group_by(AppelOffre.type_marche).all()
     return [{"type_marche": r.type_marche or "Autre", "count": r.count} for r in rows]
@@ -363,12 +401,13 @@ def get_top_acheteurs(
     type_marche: Optional[str] = None,
     mois: Optional[int] = Query(None, ge=1, le=12),
     annee: Optional[int] = Query(None, ge=2000, le=2100),
+    ville: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
     q = _apply_filters(
         db.query(AppelOffre.acheteur, func.count(AppelOffre.id).label("count"))
         .filter(AppelOffre.acheteur.isnot(None)),
-        type_marche, None, mois, annee
+        type_marche, None, mois, annee, ville
     )
     rows = q.group_by(AppelOffre.acheteur).order_by(desc("count")).limit(10).all()
     return [{"acheteur": r.acheteur, "count": r.count} for r in rows]
