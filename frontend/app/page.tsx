@@ -25,7 +25,8 @@ export default function Dashboard() {
   const [statsType, setStatsType] = useState<StatType[]>([])
   const [topAcheteurs, setTopAcheteurs] = useState<StatAcheteur[]>([])
   const [acheteurs, setAcheteurs] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
+  const [initialLoading, setInitialLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [backendError, setBackendError] = useState(false)
 
   const [typeMarche, setTypeMarche] = useState('')
@@ -52,6 +53,7 @@ export default function Dashboard() {
       .then(r => r.json()).then(setVillesStats).catch(() => {})
   }, [BASE, typeMarche, acheteur, mois, annee])
 
+  const isFirst = useState(true)
   useEffect(() => {
     const filters = {
       type_marche: typeMarche || undefined,
@@ -60,7 +62,13 @@ export default function Dashboard() {
       annee: annee ? Number(annee) : undefined,
       ville: filtreVille || undefined,
     }
-    setLoading(true)
+    // Spinner pleine page uniquement au premier chargement
+    if (isFirst[0]) {
+      setInitialLoading(true)
+      isFirst[0] = false
+    } else {
+      setRefreshing(true)
+    }
     Promise.all([
       fetchKPI(filters),
       fetchStatsMois(filters),
@@ -72,7 +80,7 @@ export default function Dashboard() {
       setStatsType(typeData)
       setTopAcheteurs(top)
     }).catch(() => setBackendError(true))
-    .finally(() => setLoading(false))
+    .finally(() => { setInitialLoading(false); setRefreshing(false) })
   }, [typeMarche, acheteur, mois, annee, filtreVille])
 
   const barData = (() => {
@@ -92,7 +100,7 @@ export default function Dashboard() {
 
   const pieData = statsType.map(s => ({ name: s.type_marche, value: s.count }))
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '280px', gap: '16px' }}>
         <div style={{
@@ -179,7 +187,12 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-          <div style={{ fontSize: '64px', opacity: 0.12, flexShrink: 0 }}>🌿</div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+            <div style={{ fontSize: '64px', opacity: 0.12 }}>🌿</div>
+            {refreshing && (
+              <div style={{ width: '20px', height: '20px', border: '2px solid rgba(255,255,255,0.2)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+            )}
+          </div>
         </div>
       </div>
 
