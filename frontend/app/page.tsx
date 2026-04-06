@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { fetchKPI, fetchStatsMois, fetchStatsType, fetchTopAcheteurs, fetchAcheteurs } from '@/lib/api'
 import type { KPI, StatMois, StatType, StatAcheteur } from '@/lib/api'
 import KpiCard from '@/components/KpiCard'
@@ -7,6 +8,8 @@ import BarChart from '@/components/BarChart'
 import PieChart from '@/components/PieChart'
 import HorizontalBarChart from '@/components/HorizontalBarChart'
 import FilterBar from '@/components/FilterBar'
+
+const GuyaneMap = dynamic(() => import('@/components/GuyaneMap'), { ssr: false })
 
 function formatMontant(m: number): string {
   if (m >= 1_000_000) return `${(m / 1_000_000).toFixed(1)} M€`
@@ -29,10 +32,15 @@ export default function Dashboard() {
   const [acheteur, setAcheteur] = useState('')
   const [mois, setMois] = useState('')
   const [annee, setAnnee] = useState('')
+  const [filtreVille, setFiltreVille] = useState('')
+  const [villesStats, setVillesStats] = useState<{ ville: string; count: number; montant_total: number; acheteurs: string[] }[]>([])
+
+  const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
 
   useEffect(() => {
     fetchAcheteurs().then(setAcheteurs).catch(() => {})
-  }, [])
+    fetch(`${BASE}/api/stats/par-ville`).then(r => r.json()).then(setVillesStats).catch(() => {})
+  }, [BASE])
 
   useEffect(() => {
     const filters = {
@@ -172,6 +180,36 @@ export default function Dashboard() {
         hideSearch
       />
 
+      {/* Filtre ville */}
+      {villesStats.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Ville :</span>
+          <select
+            value={filtreVille}
+            onChange={e => setFiltreVille(e.target.value)}
+            style={{
+              padding: '7px 12px', borderRadius: '9px', fontSize: '13px',
+              border: '1.5px solid', borderColor: filtreVille ? '#15803d' : '#e2e8f0',
+              background: filtreVille ? '#f0fdf4' : 'white',
+              color: filtreVille ? '#15803d' : '#374151',
+              fontWeight: filtreVille ? '700' : '400',
+              cursor: 'pointer', outline: 'none',
+            }}
+          >
+            <option value="">— Toutes les villes</option>
+            {villesStats.map(v => (
+              <option key={v.ville} value={v.ville}>{v.ville} ({v.count} AO)</option>
+            ))}
+          </select>
+          {filtreVille && (
+            <button onClick={() => setFiltreVille('')}
+              style={{ padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '600', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer' }}>
+              ✕ Effacer
+            </button>
+          )}
+        </div>
+      )}
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard title="Total appels d'offre" value={kpi?.total ?? 0} icon="📋" accent="green" />
@@ -186,6 +224,37 @@ export default function Dashboard() {
         <PieChart data={pieData} title="Répartition par type de marché" />
       </div>
       <HorizontalBarChart data={topAcheteurs} title="Top 10 acheteurs les plus actifs" />
+
+      {/* Carte Guyane */}
+      {villesStats.length > 0 && (
+        <div style={{ background: 'white', borderRadius: '14px', border: '1.5px solid #e2e8f0', padding: '20px 22px', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+          <div style={{ marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+            <div>
+              <h2 style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', margin: '0 0 3px' }}>
+                Carte des marchés en cours
+              </h2>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
+                Appels d&apos;offre actifs par commune · cliquez sur un cercle pour filtrer
+              </p>
+            </div>
+            {filtreVille && (
+              <div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: '8px', padding: '5px 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '13px', fontWeight: '700', color: '#15803d' }}>📍 {filtreVille}</span>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>
+                  · {villesStats.find(v => v.ville === filtreVille)?.count} AO
+                </span>
+                <button onClick={() => setFiltreVille('')}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#15803d', fontWeight: '700', fontSize: '13px' }}>✕</button>
+              </div>
+            )}
+          </div>
+          <GuyaneMap
+            data={villesStats}
+            filtreVille={filtreVille}
+            onVilleClick={setFiltreVille}
+          />
+        </div>
+      )}
     </div>
   )
 }

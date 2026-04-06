@@ -19,6 +19,7 @@ from models import Base, AppelOffre
 from scraper import run_scraper
 from llm import get_or_generate_resume
 from scheduler import start_scheduler, stop_scheduler
+from insee import sync_indices, get_indices, SERIES_BTP
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -215,6 +216,59 @@ def generate_resume(ao_id: int, db: Session = Depends(get_db)):
         logger.error(f"Error generating resume for {ao_id}: {e}")
         raise HTTPException(status_code=500, detail="Erreur lors de la génération du résumé")
 
+VILLES_GUYANE = [
+    "Cayenne", "Saint-Laurent-du-Maroni", "Kourou", "Matoury", "Rémire-Montjoly",
+    "Remire-Montjoly", "Maripasoula", "Mana", "Apatou", "Saint-Georges",
+    "Sinnamary", "Iracoubo", "Grand-Santi", "Roura", "Montsinéry-Tonnegrande",
+    "Montsinery", "Papaïchton", "Papaichton", "Camopi", "Awala-Yalimapo",
+    "Awala", "Saül", "Saul", "Saint-Élie", "Saint-Elie", "Régina", "Regina",
+    "Ouanary", "Maripa-Soula",
+]
+
+@app.get("/api/stats/par-ville")
+def get_stats_par_ville(db: Session = Depends(get_db)):
+    now = datetime.utcnow()
+    aos = db.query(AppelOffre).filter(
+        (AppelOffre.date_limite >= now) | (AppelOffre.date_limite.is_(None))
+    ).all()
+
+    result: dict = {}
+    for ao in aos:
+        texte = " ".join(filter(None, [ao.acheteur, ao.titre, ao.objet_marche, ao.texte_complet or ""]))
+        texte_lower = texte.lower()
+        matched = None
+        for ville in VILLES_GUYANE:
+            if ville.lower() in texte_lower:
+                # Normalise le nom
+                matched = ville.replace("Remire-Montjoly", "Rémire-Montjoly") \
+                               .replace("Papaichton", "Papaïchton") \
+                               .replace("Saul", "Saül") \
+                               .replace("Saint-Elie", "Saint-Élie") \
+                               .replace("Maripa-Soula", "Maripasoula") \
+                               .replace("Montsinery", "Montsinéry-Tonnegrande") \
+                               .replace("Regina", "Régina") \
+                               .replace("Awala", "Awala-Yalimapo")
+                break
+        if not matched:
+            matched = "Non localisé"
+        if matched not in result:
+            result[matched] = {"ville": matched, "count": 0, "montant_total": 0.0, "acheteurs": set()}
+        result[matched]["count"] += 1
+        result[matched]["montant_total"] += ao.montant_estime or 0
+        if ao.acheteur:
+            result[matched]["acheteurs"].add(ao.acheteur)
+
+    return [
+        {
+            "ville": v["ville"],
+            "count": v["count"],
+            "montant_total": round(v["montant_total"]),
+            "acheteurs": list(v["acheteurs"])[:5],
+        }
+        for v in sorted(result.values(), key=lambda x: -x["count"])
+        if v["ville"] != "Non localisé"
+    ]
+
 def _apply_filters(q, type_marche=None, acheteur=None, mois=None, annee=None):
     if type_marche:
         q = q.filter(AppelOffre.type_marche == type_marche)
@@ -387,6 +441,26 @@ def analyser_ao(body: AnalyseRequest):
         )
 
     return result
+
+@app.get("/api/indices")
+def get_indices_route(
+    series: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    ids = series.split(",") if series else None
+    return get_indices(db, ids)
+
+@app.post("/api/indices/sync")
+def sync_indices_route(db: Session = Depends(get_db)):
+    try:
+        result = sync_indices(db)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/indices/series")
+def list_series():
+    return [{"id": k, "nom": v} for k, v in SERIES_BTP.items()]
 
 @app.get("/api/acheteurs")
 def get_acheteurs(db: Session = Depends(get_db)):

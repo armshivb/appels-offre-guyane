@@ -56,6 +56,11 @@ export default function Sidebar() {
         <line x1="8" y1="11" x2="14" y2="11"/>
       </svg>
     )},
+    { href: '/indices', label: 'Indices BTP', icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+    )},
     { href: '/marches', label: 'Analyse des marchés', icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="18" height="18" rx="2"/>
@@ -188,7 +193,7 @@ export default function Sidebar() {
         <button onClick={() => setMenuOpen(o => !o)} style={{
           background: 'none', border: '1.5px solid rgba(250,204,21,0.4)', cursor: 'pointer',
           color: 'white', padding: '6px 10px', borderRadius: '8px',
-          display: 'flex', alignItems: 'center', gap: '8px',
+          display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0,
         }}>
           <span style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <span style={{ display: 'block', width: '18px', height: '2px', background: menuOpen ? '#facc15' : 'white', borderRadius: '2px', transform: menuOpen ? 'rotate(45deg) translate(4px, 4px)' : 'none', transition: 'all 0.2s' }} />
@@ -197,7 +202,14 @@ export default function Sidebar() {
           </span>
           <span style={{ fontSize: '13px', fontWeight: '700', color: menuOpen ? '#facc15' : 'white' }}>Menu</span>
         </button>
-        <Logo />
+
+        {/* Logo centré */}
+        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
+          <Logo />
+        </div>
+
+        {/* Spacer pour équilibrer */}
+        <div style={{ flexShrink: 0, width: '80px' }} />
       </header>
 
       {/* ── MOBILE drawer ───────────────────────────────── */}
