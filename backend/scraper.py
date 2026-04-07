@@ -8,6 +8,38 @@ from models import AppelOffre
 
 logger = logging.getLogger(__name__)
 
+VILLES_DETECTION = [
+    (["cayenne"],                                   "Cayenne"),
+    (["saint-laurent-du-maroni", "saint laurent"],  "Saint-Laurent-du-Maroni"),
+    (["kourou"],                                    "Kourou"),
+    (["matoury"],                                   "Matoury"),
+    (["rémire-montjoly", "remire-montjoly",
+      "rémire", "remire"],                          "Rémire-Montjoly"),
+    (["maripasoula", "maripa-soula"],               "Maripasoula"),
+    (["mana"],                                      "Mana"),
+    (["apatou"],                                    "Apatou"),
+    (["saint-georges"],                             "Saint-Georges"),
+    (["sinnamary"],                                 "Sinnamary"),
+    (["iracoubo"],                                  "Iracoubo"),
+    (["grand-santi"],                               "Grand-Santi"),
+    (["roura"],                                     "Roura"),
+    (["montsinéry", "montsinery"],                  "Montsinéry-Tonnegrande"),
+    (["papaïchton", "papaichton"],                  "Papaïchton"),
+    (["camopi"],                                    "Camopi"),
+    (["awala-yalimapo", "awala"],                   "Awala-Yalimapo"),
+    (["saül", "saul"],                              "Saül"),
+    (["saint-élie", "saint-elie"],                  "Saint-Élie"),
+    (["régina", "regina"],                          "Régina"),
+    (["ouanary"],                                   "Ouanary"),
+]
+
+def detect_ville(acheteur: str = "", titre: str = "", objet: str = "", texte: str = "") -> Optional[str]:
+    haystack = " ".join(filter(None, [acheteur, titre, objet, texte[:2000]])).lower()
+    for aliases, canonical in VILLES_DETECTION:
+        if any(a in haystack for a in aliases):
+            return canonical
+    return None
+
 BOAMP_API_URL = "https://boamp-datadila.opendatasoft.com/api/explore/v2.1/catalog/datasets/boamp/records"
 
 
@@ -179,11 +211,12 @@ def record_to_appel_offre(record: dict) -> dict:
         texte_parts.append(json.dumps(donnees, ensure_ascii=False)[:3000])
     texte_complet = "\n\n".join(texte_parts) if texte_parts else objet
 
+    acheteur_val = record.get("nomacheteur", "")
     return {
         "id_annonce": str(id_ann) if id_ann else "",
         "titre": objet,
         "objet_marche": objet,
-        "acheteur": record.get("nomacheteur", ""),
+        "acheteur": acheteur_val,
         "date_publication": parse_date(record.get("dateparution")),
         "date_limite": parse_date(record.get("datelimitereponse")),
         "type_marche": type_marche,
@@ -191,6 +224,7 @@ def record_to_appel_offre(record: dict) -> dict:
         "procedure": record.get("procedure_libelle") or record.get("soustype_procedure", ""),
         "url_detail": url,
         "texte_complet": texte_complet,
+        "ville": detect_ville(acheteur_val, objet, objet, texte_complet or ""),
     }
 
 

@@ -21,12 +21,15 @@ interface FilterBarProps {
   acheteur: string
   mois: string
   annee: string
+  ville?: string
   acheteurs: string[]
+  villes?: { ville: string; count: number }[]
   onSearch?: (v: string) => void
   onTypeMarche: (v: string) => void
   onAcheteur: (v: string) => void
   onMois: (v: string) => void
   onAnnee: (v: string) => void
+  onVille?: (v: string) => void
   hideSearch?: boolean
 }
 
@@ -60,17 +63,19 @@ const inputBase: CSSProperties = {
 }
 
 export default function FilterBar({
-  search = '', typeMarche, acheteur, mois, annee, acheteurs,
-  onSearch, onTypeMarche, onAcheteur, onMois, onAnnee,
+  search = '', typeMarche, acheteur, mois, annee, ville = '', acheteurs, villes = [],
+  onSearch, onTypeMarche, onAcheteur, onMois, onAnnee, onVille,
   hideSearch = false,
 }: FilterBarProps) {
   const handleReset = () => {
     onTypeMarche(''); onAcheteur(''); onMois(''); onAnnee('')
     if (onSearch) onSearch('')
+    if (onVille) onVille('')
   }
 
-  const hasFilters = typeMarche || acheteur || mois || annee || search
-  const cols = hideSearch ? 4 : 5
+  const hasFilters = typeMarche || acheteur || mois || annee || search || ville
+  const baseCount = hideSearch ? 4 : 5
+  const cols = villes.length > 0 ? baseCount + 1 : baseCount
 
   return (
     <div style={{
@@ -96,7 +101,7 @@ export default function FilterBar({
               padding: '2px 8px', borderRadius: '999px',
               border: '1px solid #bbf7d0',
             }}>
-              {[typeMarche, acheteur, mois, annee, search].filter(Boolean).length} actif{[typeMarche, acheteur, mois, annee, search].filter(Boolean).length > 1 ? 's' : ''}
+              {[typeMarche, acheteur, mois, annee, search, ville].filter(Boolean).length} actif{[typeMarche, acheteur, mois, annee, search, ville].filter(Boolean).length > 1 ? 's' : ''}
             </span>
           )}
         </div>
@@ -146,6 +151,19 @@ export default function FilterBar({
           <option value="">Tous les acheteurs</option>
           {acheteurs.map(a => <option key={a} value={a}>{a}</option>)}
         </select>
+
+        {villes.length > 0 && onVille && (
+          <select value={ville} onChange={e => onVille(e.target.value)} style={{
+            ...fieldBase,
+            borderColor: ville ? '#15803d' : '#e2e8f0',
+            background: ville ? '#f0fdf4' : 'white',
+            color: ville ? '#15803d' : '#374151',
+            fontWeight: ville ? '700' : '400',
+          }}>
+            <option value="">Toutes les villes</option>
+            {villes.map(v => <option key={v.ville} value={v.ville}>{v.ville} ({v.count})</option>)}
+          </select>
+        )}
       </div>
     </div>
   )

@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { fetchKPI, fetchStatsMois, fetchStatsType, fetchTopAcheteurs, fetchAcheteurs } from '@/lib/api'
+import { fetchKPI, fetchStatsMois, fetchStatsType, fetchTopAcheteurs, fetchAcheteurs, fetchVilles } from '@/lib/api'
 import type { KPI, StatMois, StatType, StatAcheteur } from '@/lib/api'
 import KpiCard from '@/components/KpiCard'
 import BarChart from '@/components/BarChart'
@@ -25,6 +25,7 @@ export default function Dashboard() {
   const [statsType, setStatsType] = useState<StatType[]>([])
   const [topAcheteurs, setTopAcheteurs] = useState<StatAcheteur[]>([])
   const [acheteurs, setAcheteurs] = useState<string[]>([])
+  const [villes, setVilles] = useState<{ ville: string; count: number }[]>([])
   const [initialLoading, setInitialLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [backendError, setBackendError] = useState(false)
@@ -40,6 +41,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchAcheteurs().then(setAcheteurs).catch(() => {})
+    fetchVilles().then(setVilles).catch(() => {})
   }, [BASE])
 
   useEffect(() => {
@@ -198,41 +200,12 @@ export default function Dashboard() {
 
       <FilterBar
         typeMarche={typeMarche} acheteur={acheteur}
-        mois={mois} annee={annee} acheteurs={acheteurs}
+        mois={mois} annee={annee} ville={filtreVille}
+        acheteurs={acheteurs} villes={villes}
         onTypeMarche={setTypeMarche} onAcheteur={setAcheteur}
-        onMois={setMois} onAnnee={setAnnee}
+        onMois={setMois} onAnnee={setAnnee} onVille={setFiltreVille}
         hideSearch
       />
-
-      {/* Filtre ville */}
-      {villesStats.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Ville :</span>
-          <select
-            value={filtreVille}
-            onChange={e => setFiltreVille(e.target.value)}
-            style={{
-              padding: '7px 12px', borderRadius: '9px', fontSize: '13px',
-              border: '1.5px solid', borderColor: filtreVille ? '#15803d' : '#e2e8f0',
-              background: filtreVille ? '#f0fdf4' : 'white',
-              color: filtreVille ? '#15803d' : '#374151',
-              fontWeight: filtreVille ? '700' : '400',
-              cursor: 'pointer', outline: 'none',
-            }}
-          >
-            <option value="">— Toutes les villes</option>
-            {villesStats.map(v => (
-              <option key={v.ville} value={v.ville}>{v.ville} ({v.count} AO)</option>
-            ))}
-          </select>
-          {filtreVille && (
-            <button onClick={() => setFiltreVille('')}
-              style={{ padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '600', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer' }}>
-              ✕ Effacer
-            </button>
-          )}
-        </div>
-      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -264,9 +237,6 @@ export default function Dashboard() {
             {filtreVille && (
               <div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: '8px', padding: '5px 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '13px', fontWeight: '700', color: '#15803d' }}>📍 {filtreVille}</span>
-                <span style={{ fontSize: '12px', color: '#64748b' }}>
-                  · {villesStats.find(v => v.ville === filtreVille)?.count} AO
-                </span>
                 <button onClick={() => setFiltreVille('')}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#15803d', fontWeight: '700', fontSize: '13px' }}>✕</button>
               </div>

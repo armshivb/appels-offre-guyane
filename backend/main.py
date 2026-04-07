@@ -16,7 +16,7 @@ from pydantic import BaseModel
 
 from database import engine, get_db
 from models import Base, AppelOffre
-from scraper import run_scraper
+from scraper import run_scraper, detect_ville
 from llm import get_or_generate_resume
 from scheduler import start_scheduler, stop_scheduler
 from insee import sync_indices, get_indices, SERIES_BTP
@@ -24,9 +24,28 @@ from insee import sync_indices, get_indices, SERIES_BTP
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def _backfill_villes(db):
+    """Populate ville column for existing records that have none."""
+    rows = db.query(AppelOffre).filter(AppelOffre.ville.is_(None)).all()
+    updated = 0
+    for ao in rows:
+        v = detect_ville(ao.acheteur or "", ao.titre or "", ao.objet_marche or "", ao.texte_complet or "")
+        if v:
+            ao.ville = v
+            updated += 1
+    if updated:
+        db.commit()
+        logger.info(f"Backfilled ville for {updated} records")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    from database import SessionLocal
+    db = SessionLocal()
+    try:
+        _backfill_villes(db)
+    finally:
+        db.close()
     start_scheduler()
     yield
     stop_scheduler()
@@ -235,6 +254,7 @@ def get_stats_par_ville(
 ):
     now = datetime.utcnow()
     q = db.query(AppelOffre).filter(
+        AppelOffre.ville.isnot(None),
         (AppelOffre.date_limite >= now) | (AppelOffre.date_limite.is_(None))
     )
     q = _apply_filters(q, type_marche, acheteur, mois, annee)
@@ -242,29 +262,13 @@ def get_stats_par_ville(
 
     result: dict = {}
     for ao in aos:
-        texte = " ".join(filter(None, [ao.acheteur, ao.titre, ao.objet_marche, ao.texte_complet or ""]))
-        texte_lower = texte.lower()
-        matched = None
-        for ville in VILLES_GUYANE:
-            if ville.lower() in texte_lower:
-                # Normalise le nom
-                matched = ville.replace("Remire-Montjoly", "Rémire-Montjoly") \
-                               .replace("Papaichton", "Papaïchton") \
-                               .replace("Saul", "Saül") \
-                               .replace("Saint-Elie", "Saint-Élie") \
-                               .replace("Maripa-Soula", "Maripasoula") \
-                               .replace("Montsinery", "Montsinéry-Tonnegrande") \
-                               .replace("Regina", "Régina") \
-                               .replace("Awala", "Awala-Yalimapo")
-                break
-        if not matched:
-            matched = "Non localisé"
-        if matched not in result:
-            result[matched] = {"ville": matched, "count": 0, "montant_total": 0.0, "acheteurs": set()}
-        result[matched]["count"] += 1
-        result[matched]["montant_total"] += ao.montant_estime or 0
+        v = ao.ville
+        if v not in result:
+            result[v] = {"ville": v, "count": 0, "montant_total": 0.0, "acheteurs": set()}
+        result[v]["count"] += 1
+        result[v]["montant_total"] += ao.montant_estime or 0
         if ao.acheteur:
-            result[matched]["acheteurs"].add(ao.acheteur)
+            result[v]["acheteurs"].add(ao.acheteur)
 
     return [
         {
@@ -274,7 +278,6 @@ def get_stats_par_ville(
             "acheteurs": list(v["acheteurs"])[:5],
         }
         for v in sorted(result.values(), key=lambda x: -x["count"])
-        if v["ville"] != "Non localisé"
     ]
 
 VILLES_ALIASES: dict = {
@@ -302,7 +305,6 @@ VILLES_ALIASES: dict = {
 }
 
 def _apply_filters(q, type_marche=None, acheteur=None, mois=None, annee=None, ville=None):
-    from sqlalchemy import or_
     if type_marche:
         q = q.filter(AppelOffre.type_marche == type_marche)
     if acheteur:
@@ -312,15 +314,7 @@ def _apply_filters(q, type_marche=None, acheteur=None, mois=None, annee=None, vi
     if mois:
         q = q.filter(extract("month", AppelOffre.date_publication) == mois)
     if ville:
-        aliases = VILLES_ALIASES.get(ville.upper(), [ville.lower()])
-        conditions = []
-        for alias in aliases:
-            like = f"%{alias}%"
-            conditions.append(AppelOffre.acheteur.ilike(like))
-            conditions.append(AppelOffre.titre.ilike(like))
-            conditions.append(AppelOffre.objet_marche.ilike(like))
-            conditions.append(AppelOffre.texte_complet.ilike(like))
-        q = q.filter(or_(*conditions))
+        q = q.filter(AppelOffre.ville == ville)
     return q
 
 @app.get("/api/stats/kpi")
@@ -508,6 +502,15 @@ def sync_indices_route(db: Session = Depends(get_db)):
 @app.get("/api/indices/series")
 def list_series():
     return [{"id": k, "nom": v} for k, v in SERIES_BTP.items()]
+
+@app.get("/api/villes")
+def get_villes(db: Session = Depends(get_db)):
+    rows = db.query(AppelOffre.ville, func.count(AppelOffre.id).label("count")) \
+             .filter(AppelOffre.ville.isnot(None)) \
+             .group_by(AppelOffre.ville) \
+             .order_by(AppelOffre.ville) \
+             .all()
+    return [{"ville": r.ville, "count": r.count} for r in rows]
 
 @app.get("/api/acheteurs")
 def get_acheteurs(db: Session = Depends(get_db)):

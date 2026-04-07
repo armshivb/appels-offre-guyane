@@ -21,6 +21,7 @@ class AppelOffre(Base):
     texte_complet = Column(Text, nullable=True)
     resume_llm = Column(Text, nullable=True)
     resume_genere_le = Column(DateTime, nullable=True)
+    ville = Column(String, nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

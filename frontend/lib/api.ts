@@ -126,6 +126,12 @@ export async function fetchAcheteurs(): Promise<string[]> {
   return r.json()
 }
 
+export async function fetchVilles(): Promise<{ ville: string; count: number }[]> {
+  const r = await fetch(`${BASE}/villes`)
+  if (!r.ok) throw new Error('Failed to fetch villes')
+  return r.json()
+}
+
 export async function triggerScrape(): Promise<{ new: number; skipped: number; errors: number }> {
   const r = await fetch(`${BASE}/scrape`, { method: 'POST' })
   if (!r.ok) throw new Error('Failed to trigger scrape')
