@@ -57,7 +57,9 @@ export interface StatsFilters {
 
 function buildQS(filters: StatsFilters): string {
   const qs = new URLSearchParams()
-  Object.entries(filters).forEach(([k, v]) => { if (v) qs.set(k, v) })
+  Object.entries(filters).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') qs.set(k, String(v))
+  })
   const s = qs.toString()
   return s ? `?${s}` : ''
 }
