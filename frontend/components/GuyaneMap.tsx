@@ -56,12 +56,8 @@ export default function GuyaneMap({ data, filtreVille, onVilleClick }: {
   filtreVille: string
   onVilleClick: (ville: string) => void
 }) {
-  const [MapComponents, setMapComponents] = useState<{
-    MapContainer: React.ComponentType<unknown>
-    TileLayer: React.ComponentType<unknown>
-    CircleMarker: React.ComponentType<unknown>
-    Tooltip: React.ComponentType<unknown>
-  } | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [MapComponents, setMapComponents] = useState<Record<string, React.ComponentType<any>> | null>(null)
   const [tooltip, setTooltip] = useState<{ ville: VilleStat; x: number; y: number } | null>(null)
 
   useEffect(() => {
@@ -97,18 +93,16 @@ export default function GuyaneMap({ data, filtreVille, onVilleClick }: {
     )
   }
 
-  const { MapContainer, TileLayer, CircleMarker, Tooltip } = MapComponents
+  const { MapContainer, TileLayer, CircleMarker, Tooltip } = MapComponents as Record<string, React.ComponentType<any>> // eslint-disable-line @typescript-eslint/no-explicit-any
 
   return (
     <div style={{ position: 'relative' }}>
-      {/* @ts-expect-error react-leaflet types */}
       <MapContainer
         bounds={[[2.1, -54.6], [5.75, -51.6]]}
         boundsOptions={{ padding: [20, 20] }}
         style={{ height: '420px', borderRadius: '12px', border: '1.5px solid #bbf7d0', zIndex: 0 }}
         scrollWheelZoom={false}
       >
-        {/* @ts-expect-error react-leaflet types */}
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           attribution='&copy; <a href="https://carto.com/">CARTO</a>'
@@ -117,7 +111,6 @@ export default function GuyaneMap({ data, filtreVille, onVilleClick }: {
           const [lat, lng] = COORDS[ville.ville]
           const isSelected = filtreVille === ville.ville
           return (
-            // @ts-expect-error react-leaflet types
             <CircleMarker
               key={ville.ville}
               center={[lat, lng]}
@@ -132,7 +125,6 @@ export default function GuyaneMap({ data, filtreVille, onVilleClick }: {
                 click: () => onVilleClick(ville.ville === filtreVille ? '' : ville.ville),
               }}
             >
-              {/* @ts-expect-error react-leaflet types */}
               <Tooltip permanent={false} sticky>
                 <div style={{ minWidth: '180px' }}>
                   <p style={{ margin: '0 0 4px', fontWeight: '800', fontSize: '13px', color: '#14532d' }}>
