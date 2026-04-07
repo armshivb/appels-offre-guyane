@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { fetchKPI, fetchStatsMois, fetchStatsType, fetchTopAcheteurs, fetchAcheteurs } from '@/lib/api'
 import type { KPI, StatMois, StatType, StatAcheteur } from '@/lib/api'
@@ -53,7 +53,7 @@ export default function Dashboard() {
       .then(r => r.json()).then(setVillesStats).catch(() => {})
   }, [BASE, typeMarche, acheteur, mois, annee])
 
-  const isFirst = useState(true)
+  const isFirst = useRef(true)
   useEffect(() => {
     const filters = {
       type_marche: typeMarche || undefined,
@@ -63,9 +63,9 @@ export default function Dashboard() {
       ville: filtreVille || undefined,
     }
     // Spinner pleine page uniquement au premier chargement
-    if (isFirst[0]) {
+    if (isFirst.current) {
       setInitialLoading(true)
-      isFirst[0] = false
+      isFirst.current = false
     } else {
       setRefreshing(true)
     }
